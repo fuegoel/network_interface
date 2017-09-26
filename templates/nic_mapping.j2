@@ -1,0 +1,15 @@
+{% for nic in nic_mappings %}
+{%- if nic.logical_name is defined -%}
+{% if nic.type == "multi-port" -%}
+{% set port_num = nic.port_attributes['port_num'] %}
+SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*/{{nic.bus_address}}/*", ATTR{dev_id}=="0x{{port_num}}", NAME:="{{nic.logical_name}}"
+SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*/{{nic.bus_address}}/*", ATTR{dev_port}=="{{port_num}}", NAME:="{{nic.logical_name}}"
+{% elif  nic.type == "simple-port" %}
+SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*/{{nic.bus_address}}/*", NAME:="{{nic.logical_name}}"
+{% else %}
+SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*/{{nic.bus_address}}/*", NAME:="{{nic.logical_name}}"
+{% endif %}
+{% else %}
+SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*/{{nic_mappings[nic]}}/*", NAME:="{{nic}}"
+{% endif %}
+{% endfor %}

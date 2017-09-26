@@ -1,5 +1,7 @@
 auto {{ item.device }}
-{% if item.bootproto == 'static' %}
+{% if item.bootproto == 'manual' %}
+iface {{ item.device }} inet manual
+{% elif item.bootproto == 'static' %}
 iface {{ item.device }} inet static
 {% if item.address is defined %}
 address {{ item.address }}
@@ -18,8 +20,9 @@ bridge_stp {{ item.stp }}
 {% endif %}
 {% endif %}
 
-{% if item.bootproto == 'dhcp' %}
+{% elif item.bootproto == 'dhcp' %}
 iface {{ item.device }}  inet dhcp
+{% endif %}
 {% if item.ports is defined %}
 bridge_ports {{ item.port }}
 {% endif %}

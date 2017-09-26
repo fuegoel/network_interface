@@ -1,43 +1,67 @@
 auto {{ item.device }}
-{% if item.bootproto == 'static' %}
+{% if item.bootproto == 'manual'}
+iface {{ item.device }} inet manual
+{% elif item.bootproto == 'static' %}
 iface {{ item.device }} inet static
-{% if item.address is defined %}
+{% if item.address is defined -%}
 address {{ item.address }}
 {% endif %}
-{% if item.netmask is defined %}
+{%- if item.netmask is defined -%}
 netmask {{ item.netmask }}
 {% endif %}
-{% if item.gateway is defined %}
+{%- if item.gateway is defined -%}
 gateway {{ item.gateway }}
 {% endif %}
-{% if item.bond_mode is defined %}
+{% elif item.bootproto == 'dhcp' %}
+iface {{ item.device }} inet dhcp
+{% endif %}
+
+{%- if item.bond_mode is defined -%}
 bond-mode {{ item.bond_mode }}
 {% endif %}
 bond-miimon {{ item.bond_miimon|default(100) }}
-{% if item.bond_slaves is defined and item.bond_mode == 'active-backup' %}
+{%- if item.bond_slaves is defined and item.bond_mode == 'active-backup' -%}
 bond-slaves none
 {% endif %}
-{% if item.bond_slaves is defined and item.bond_mode == '802.3ad' %}
+{%- if item.bond_slaves is defined and item.bond_mode == '802.3ad' -%}
 bond-slaves {{ item.bond_slaves|join(' ') }}
 {% endif %}
-{% endif %}
-
-{% if item.bootproto == 'dhcp' %}
-iface {{ item.device }}  inet dhcp
-{% if item.bond_mode is defined %}
-bond-mode {{ item.bond_mode }}
-{% endif %}
-bond-miimon {{ item.bond_miimon|default(100) }}
-{% if item.bond_slaves is defined and item.bond_mode == 'active-backup' %}
-bond-slaves none
-{% endif %}
-{% if item.bond_slaves is defined and item.bond_mode == '802.3ad' %}
-bond-slaves {{ item.bond_slaves|join(' ') }}
-{% endif %}
-{% endif %}
-
-{% if item.route is defined %}
-{% for i in item.route %}
-up route add -net {{ i.network }}  netmask {{ i.netmask }} gw {{ i.gateway }} dev {{ item.device }}
+{%- if item.bond_options is defined -%}
+{% for key, value in item.bond_options.iteritems() %}
+bond-{{ key }}{{ value }}
 {% endfor %}
+{% endif %}
+{%- if item.mtu is defined -%}
+mtu {{ item.mtu }}
+{% endif %}
+{%- if item.ovs_bridge is defined -%}
+up ip link set {{ item.device }} up || true
+{% endif %}
+
+{%- if item.route is defined -%}
+{% for i in item.route %}
+{% if i.netmask == '0.0.0.0' %}
+pre-ip ip route delete default || true
+{% endif %}
+up route add -net {{ i.network }}  netmask {{ i.netmask }} gw {{ i.gateway }} dev {{ item.device }}
+down route delete -net {{ i.network }} netmask {{ i.netmask }} gw {{ i.gateway }} dev {{ item.device }}
+{% endfor %}
+{% endif %}
+
+{%- if item.routing_table is defined -%}
+{%- if item.address is defined -%}
+{%- if item.gateway is defined -%}
+up ip route add default via {{ item.gateway }} table {{ item.routing_table }} || true
+down ip route delete default via {{ item.gateway }} table {{ item.routing_table }} || true
+{%- if item.cidr is defined -%}
+up ip rule add from {{ item.address }} table {{ item.routing_table }} || true
+down up rule delete from {{ item.address }} table {{ item.routing_table }} || true
+{%- if item.vips is defined -%}
+{% for vip in item.vips %}
+up ip rule add from {{ vip }} table {{ item.routing_table }} || true
+down ip rule delete from {{ vip }} table {{ item.routing_table }} || true
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endif %}
 {% endif %}

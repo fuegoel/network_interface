@@ -1,3 +1,11 @@
 auto {{ item.1 }}
 iface {{ item.1 }} inet manual
 bond-master {{ item.0.device }}
+{% if item.0.bond_primary is defined and item.1 == item.0.bond_primary %}
+bond-primary {{ item.1 }}
+{% endif %}
+{% if disable_lro %}
+pre-up ethtool -K {{ item.1 }} lro off || true
+{% endif %}
+pre-up ip addr flush dev {{ item.1 }} || true
+up ip link set {{ item.1 }} up || true
