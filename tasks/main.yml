@@ -106,3 +106,5 @@
   when: network_bridge_interfaces is defined and item.route is defined and ansible_os_family == 'RedHat'
   notify:
    - restart network
+
+- meta: flush_handlers
